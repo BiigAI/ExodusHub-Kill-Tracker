@@ -96,19 +96,10 @@ namespace ExodusHub_Kill_Tracker
             // Save user settings for next time
             UserSettings.Save(logFilePath, username);
 
-            // Step 3: Get the API URL from config file
-            string apiUrl = LoadApiUrlFromConfig();
-            if (string.IsNullOrWhiteSpace(apiUrl))
-            {
-                Console.WriteLine("API URL not found in config file. Please ensure appsettings.json exists and contains an 'ApiUrl' property.");
-                Console.WriteLine("Press any key to exit...");
-                Console.ReadKey();
-                return;
-            }
+
 
             // Initialize the HTTP client
             httpClient = new HTTPClient();
-            httpClient.SetApiUrl(apiUrl);
 
             Console.WriteLine($"\nTracking kills for user: {username}");
             Console.WriteLine("Monitoring log file in real-time... Press Ctrl+C to exit.\n");
@@ -134,28 +125,6 @@ namespace ExodusHub_Kill_Tracker
             Console.ReadKey();
         }
 
-        // Helper to load API URL from appsettings.json
-        static string LoadApiUrlFromConfig()
-        {
-            try
-            {
-                string configPath = "appsettings.json";
-                if (!File.Exists(configPath))
-                    return null;
-
-                string json = File.ReadAllText(configPath);
-                using var doc = JsonDocument.Parse(json);
-                if (doc.RootElement.TryGetProperty("ApiUrl", out var apiUrlElement))
-                {
-                    return apiUrlElement.GetString();
-                }
-            }
-            catch
-            {
-                // Ignore and return null
-            }
-            return null;
-        }
 
         static async Task MonitorLogFileAsync(string filePath, string username)
         {
