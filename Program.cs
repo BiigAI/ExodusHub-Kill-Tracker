@@ -5,6 +5,8 @@ using System.Globalization;
 using System.Threading;
 using System.Threading.Tasks;
 using ExodusHub_Kill_Tracker;
+// Add for JSON config reading
+using System.Text.Json;
 
 namespace ExodusHub_Kill_Tracker
 {
@@ -18,31 +20,79 @@ namespace ExodusHub_Kill_Tracker
             Console.WriteLine("Game Log Kill Tracker");
             Console.WriteLine("=====================");
 
-            // Step 1: Get the path to the game.log file
-            Console.Write("Enter the path to your game.log file: ");
-            string logFilePath = Console.ReadLine();
+            // Try to load saved user settings
+            var userSettings = UserSettings.Load();
+            string logFilePath = userSettings?.GameLogPath;
+            string username = userSettings?.Username;
 
-            // Validate file exists
-            while (!File.Exists(logFilePath))
+            // Step 1: Get the path to the game.log file
+            if (string.IsNullOrWhiteSpace(logFilePath))
             {
-                Console.WriteLine("File not found. Please enter a valid path:");
+                Console.Write("Enter the path to your game.log file: ");
                 logFilePath = Console.ReadLine();
+
+                // Validate file exists
+                while (!File.Exists(logFilePath))
+                {
+                    Console.WriteLine("File not found. Please enter a valid path:");
+                    logFilePath = Console.ReadLine();
+                }
+            }
+            else
+            {
+                // Validate saved file path still exists
+                if (!File.Exists(logFilePath))
+                {
+                    Console.WriteLine($"Saved game log path not found: {logFilePath}");
+                    Console.Write("Enter the path to your game.log file: ");
+                    logFilePath = Console.ReadLine();
+
+                    // Validate file exists
+                    while (!File.Exists(logFilePath))
+                    {
+                        Console.WriteLine("File not found. Please enter a valid path:");
+                        logFilePath = Console.ReadLine();
+                    }
+                }
+                else
+                {
+                    Console.WriteLine($"Using saved game log path: {logFilePath}");
+                }
             }
 
             // Step 2: Get the username
-            Console.Write("Enter your username: ");
-            string username = Console.ReadLine();
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                Console.Write("Enter your username: ");
+                username = Console.ReadLine();
+            }
+            else
+            {
+                Console.WriteLine($"Using saved username: {username}");
+                Console.Write("Press Enter to start tracking with this username, or type a new one: ");
+                string newUsername = Console.ReadLine();
+                if (!string.IsNullOrWhiteSpace(newUsername))
+                {
+                    username = newUsername;
+                }
+            }
 
-            // Step 3: Get the API URL
-            Console.Write("Enter your Node.js API URL (default: http://localhost:3000/api/kills): ");
-            string inputUrl = Console.ReadLine();
+            // Save user settings for next time
+            UserSettings.Save(logFilePath, username);
+
+            // Step 3: Get the API URL from config file
+            string apiUrl = LoadApiUrlFromConfig();
+            if (string.IsNullOrWhiteSpace(apiUrl))
+            {
+                Console.WriteLine("API URL not found in config file. Please ensure appsettings.json exists and contains an 'ApiUrl' property.");
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
 
             // Initialize the HTTP client
             httpClient = new HTTPClient();
-            if (!string.IsNullOrWhiteSpace(inputUrl))
-            {
-                httpClient.SetApiUrl(inputUrl);
-            }
+            httpClient.SetApiUrl(apiUrl);
 
             Console.WriteLine($"\nTracking kills for user: {username}");
             Console.WriteLine("Monitoring log file in real-time... Press Ctrl+C to exit.\n");
@@ -68,6 +118,29 @@ namespace ExodusHub_Kill_Tracker
             Console.ReadKey();
         }
 
+        // Helper to load API URL from appsettings.json
+        static string LoadApiUrlFromConfig()
+        {
+            try
+            {
+                string configPath = "appsettings.json";
+                if (!File.Exists(configPath))
+                    return null;
+
+                string json = File.ReadAllText(configPath);
+                using var doc = JsonDocument.Parse(json);
+                if (doc.RootElement.TryGetProperty("ApiUrl", out var apiUrlElement))
+                {
+                    return apiUrlElement.GetString();
+                }
+            }
+            catch
+            {
+                // Ignore and return null
+            }
+            return null;
+        }
+
         static async Task MonitorLogFileAsync(string filePath, string username)
         {
             // Updated regex pattern with correct group order and named groups
@@ -75,7 +148,8 @@ namespace ExodusHub_Kill_Tracker
             Regex regex = new Regex(pattern);
 
             int killCount = 0;
-            long lastPosition = LoadLastPosition();
+            //long lastPosition = LoadLastPosition();
+            long lastPosition;
 
             using (FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             using (StreamReader reader = new StreamReader(fs))
@@ -141,7 +215,7 @@ namespace ExodusHub_Kill_Tracker
             }
 
             // Log potential kill lines for debugging
-            Console.WriteLine("Potential kill line found: " + line);
+            //Console.WriteLine("Potential kill line found: " + line);
 
             // Try the primary regex first
             Match match = regex.Match(line);
@@ -156,7 +230,7 @@ namespace ExodusHub_Kill_Tracker
                 string weapon = match.Groups["weapon"].Value;
                 string damageType = match.Groups["damageType"].Value;
 
-                Console.WriteLine($"Match found - Killer: {killer}, Victim: {victim}");
+                //Console.WriteLine($"Match found - Killer: {killer}, Victim: {victim}");
 
                 if (killer.Equals(username, StringComparison.OrdinalIgnoreCase))
                 {
@@ -187,7 +261,7 @@ namespace ExodusHub_Kill_Tracker
                     DateTime parsedTime = DateTime.Parse(timestamp, null, DateTimeStyles.RoundtripKind);
                     string formattedTime = parsedTime.ToString("HH:mm:ss");
 
-                    Console.WriteLine($"[{formattedTime}] | {killer} killed {simplifiedVictim} with {simplifiedWeapon} at location {simplifiedZone}. The kill was a {damageType}");
+                    Console.WriteLine($"\n[{formattedTime}] | {killer} killed {simplifiedVictim} with {simplifiedWeapon} at location {simplifiedZone}. The kill was a {damageType}");
 
                     var killData = new KillData
                     {
