@@ -17,8 +17,8 @@ namespace ExodusHub_Kill_Tracker
 
         static async Task Main(string[] args)
         {
-            Console.WriteLine("Game Log Kill Tracker");
-            Console.WriteLine("=====================");
+            Console.WriteLine("ExodusHub Kill Tracker");
+            Console.WriteLine("=-=-=-=-=-=-=-=-=-=-=-=");
 
             // Try to load saved user settings
             var userSettings = UserSettings.Load();
@@ -56,7 +56,23 @@ namespace ExodusHub_Kill_Tracker
                 }
                 else
                 {
-                    Console.WriteLine($"Using saved game log path: {logFilePath}");
+                    Console.WriteLine($"Saved game log path: {logFilePath}");
+                    Console.Write("Press Enter to use this path, or type a new one: ");
+                    string newPath = Console.ReadLine();
+                    if (!string.IsNullOrWhiteSpace(newPath))
+                    {
+                        logFilePath = newPath;
+                        // Validate file exists
+                        while (!File.Exists(logFilePath))
+                        {
+                            Console.WriteLine("File not found. Please enter a valid path:");
+                            logFilePath = Console.ReadLine();
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Using saved game log path: {logFilePath}");
+                    }
                 }
             }
 
