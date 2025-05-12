@@ -13,8 +13,9 @@ ExodusHub Kill Tracker is a Windows executable that monitors your Star Citizen `
 
 ### Download & Run
 
-1. Download the latest release EXE from the releases page or your distribution source.
-2. Run the executable.
+1. Download the latest release EXE and appsettings.json from the releases page or your distribution source.
+2. Place the two files in a folder together (wherever you'd like, they just need to be together)
+3. Run the executable.
 
 ### Configuration
 
