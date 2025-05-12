@@ -9,19 +9,12 @@ namespace ExodusHub_Kill_Tracker
     internal class HTTPClient
     {
         private readonly HttpClient _client;
-        private string _apiUrl;
+        private string _apiBaseUrl; // Store the base API URL
 
-        public HTTPClient(string apiUrl = "https://sc.exoduspmc.org/api/kills")
-        
+        public HTTPClient(string apiUrl = "http://localhost:3000/api")
         {
             _client = new HttpClient();
-            _apiUrl = apiUrl;
-
-            // Ensure the URL ends with /kills to match our API structure
-            if (!_apiUrl.EndsWith("/kills"))
-            {
-                _apiUrl = _apiUrl.TrimEnd('/') + "/kills";
-            }
+            _apiBaseUrl = apiUrl.TrimEnd('/'); // Don't append /kills here
         }
 
         public void SetApiUrl(string apiUrl)
@@ -29,26 +22,23 @@ namespace ExodusHub_Kill_Tracker
             if (string.IsNullOrWhiteSpace(apiUrl))
                 throw new ArgumentException("API URL cannot be empty", nameof(apiUrl));
 
-            _apiUrl = apiUrl;
+            _apiBaseUrl = apiUrl.TrimEnd('/');
         }
 
         public async Task<bool> SendKillDataAsync(KillData killData)
         {
             try
             {
-                // Serialize the kill data to JSON
                 string json = JsonSerializer.Serialize(killData, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 });
 
-                // Create the HTTP content
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-                // Send the POST request to the API
-                var response = await _client.PostAsync(_apiUrl, content);
+                // Send to /kills endpoint
+                var response = await _client.PostAsync(_apiBaseUrl + "/kills", content);
 
-                // Return success status
                 return response.IsSuccessStatusCode;
             }
             catch (Exception)
@@ -57,22 +47,19 @@ namespace ExodusHub_Kill_Tracker
             }
         }
 
-        // Helper method to log additional details when needed
         public async Task<(bool Success, string Message)> SendKillDataWithDetailsAsync(KillData killData)
         {
             try
             {
-                // Serialize the kill data to JSON
                 string json = JsonSerializer.Serialize(killData, new JsonSerializerOptions
                 {
                     PropertyNamingPolicy = JsonNamingPolicy.CamelCase
                 });
 
-                // Create the HTTP content
                 var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
 
-                // Send the POST request to the API
-                var response = await _client.PostAsync(_apiUrl, content);
+                // Send to /kills endpoint
+                var response = await _client.PostAsync(_apiBaseUrl + "/kills", content);
 
                 if (response.IsSuccessStatusCode)
                 {
@@ -101,7 +88,27 @@ namespace ExodusHub_Kill_Tracker
                 return (false, $"Error sending data: {ex.Message}");
             }
         }
+
+        // Verifies connection to the API by sending a simple GET request
+        public async Task<(bool Success, string Message)> VerifyApiConnectionAsync()
+        {
+            try
+            {
+                // Use the base API URL for a health check
+                var response = await _client.GetAsync(_apiBaseUrl);
+                if (response.IsSuccessStatusCode)
+                {
+                    return (true, "Successfully connected to the server API.");
+                }
+                else
+                {
+                    return (false, $"Server responded with status code: {response.StatusCode}");
+                }
+            }
+            catch (Exception ex)
+            {
+                return (false, $"Error connecting to server API: {ex.Message}");
+            }
+        }
     }
-
-
 }

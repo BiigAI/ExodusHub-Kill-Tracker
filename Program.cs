@@ -76,6 +76,68 @@ namespace ExodusHub_Kill_Tracker
                 }
             }
 
+            // --- Verification logic for Game.log file accessibility ---
+            bool logFileVerified = false;
+            while (!logFileVerified)
+            {
+                try
+                {
+                    using (FileStream fs = new FileStream(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                    {
+                        // If we can open the file for reading, consider it verified
+                        logFileVerified = true;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Error accessing log file: {ex.Message}");
+                    Console.Write("Please enter a valid path to your game.log file: ");
+                    logFilePath = Console.ReadLine();
+                    while (!File.Exists(logFilePath))
+                    {
+                        Console.WriteLine("File not found. Please enter a valid path:");
+                        logFilePath = Console.ReadLine();
+                    }
+                }
+            }
+            Console.WriteLine($"Game.log file found and being actively tracked in real time: {logFilePath}");
+
+            // --- Show the most recent log line for context (truncated for brevity) ---
+            try
+            {
+                string lastLine = null;
+                // Use FileStream with FileShare.ReadWrite to avoid file lock issues
+                using (FileStream fs = new FileStream(logFilePath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (StreamReader reader = new StreamReader(fs))
+                {
+                    string line;
+                    // Read through the file to get the last non-empty line
+                    while ((line = reader.ReadLine()) != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(line))
+                        {
+                            lastLine = line.Trim();
+                        }
+                    }
+                }
+                if (!string.IsNullOrEmpty(lastLine))
+                {
+                    // Truncate after 6 words for brevity
+                    var words = lastLine.Split(' ');
+                    string preview = string.Join(' ', words.Length > 6 ? words[..6] : words);
+                    if (words.Length > 6) preview += " ...";
+                    Console.WriteLine($"Most recent log line: {preview}");
+                }
+                else
+                {
+                    Console.WriteLine("Most recent log line: (log file is empty)");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Could not read last log line: {ex.Message}");
+            }
+
             // Step 2: Get the username
             if (string.IsNullOrWhiteSpace(username))
             {
@@ -96,10 +158,23 @@ namespace ExodusHub_Kill_Tracker
             // Save user settings for next time
             UserSettings.Save(logFilePath, username);
 
-
-
             // Initialize the HTTP client
             httpClient = new HTTPClient();
+
+            // --- Verify connection to the server API before proceeding ---
+            var (apiConnected, apiMessage) = await httpClient.VerifyApiConnectionAsync();
+            if (apiConnected)
+            {
+                Console.WriteLine($"[API] {apiMessage}");
+            }
+            else
+            {
+                Console.WriteLine($"[API] {apiMessage}");
+                Console.WriteLine("Unable to connect to the server API. Please check your internet connection or try again later.");
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
 
             Console.WriteLine($"\nTracking kills for user: {username}");
             Console.WriteLine("Monitoring log file in real-time... Press Ctrl+C to exit.\n");

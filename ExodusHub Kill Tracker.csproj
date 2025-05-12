@@ -9,6 +9,7 @@
     <!-- For framework-dependent deployment - use this instead of self-contained -->
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
+    <SignAssembly>True</SignAssembly>
   </PropertyGroup>
   
   <ItemGroup>
