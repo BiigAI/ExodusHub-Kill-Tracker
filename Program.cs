@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using ExodusHub_Kill_Tracker;
 // Add for JSON config reading
 using System.Text.Json;
+// Add for process checking
+using System.Diagnostics;
 
 namespace ExodusHub_Kill_Tracker
 {
@@ -19,6 +21,18 @@ namespace ExodusHub_Kill_Tracker
         {
             Console.WriteLine("ExodusHub Kill Tracker");
             Console.WriteLine("=-=-=-=-=-=-=-=-=-=-=-=");
+
+            // --- Check if starcitizen.exe is running ---
+            var scProcesses = Process.GetProcessesByName("starcitizen");
+            if (scProcesses == null || scProcesses.Length == 0)
+            {
+                SetConsoleColor(ConsoleColor.Red);
+                Console.WriteLine("Warning: 'starcitizen.exe' must be running before launching the kill tracker.");
+                ResetConsoleColor();
+                Console.WriteLine("Press any key to exit...");
+                Console.ReadKey();
+                return;
+            }
 
             // Try to load saved user settings
             var userSettings = UserSettings.Load();
@@ -34,7 +48,9 @@ namespace ExodusHub_Kill_Tracker
                 // Validate file exists
                 while (!File.Exists(logFilePath))
                 {
+                    SetConsoleColor(ConsoleColor.Red);
                     Console.WriteLine("File not found. Please enter a valid path:");
+                    ResetConsoleColor();
                     logFilePath = Console.ReadLine();
                 }
             }
@@ -43,14 +59,18 @@ namespace ExodusHub_Kill_Tracker
                 // Validate saved file path still exists
                 if (!File.Exists(logFilePath))
                 {
+                    SetConsoleColor(ConsoleColor.Red);
                     Console.WriteLine($"Saved game log path not found: {logFilePath}");
+                    ResetConsoleColor();
                     Console.Write("Enter the path to your game.log file: ");
                     logFilePath = Console.ReadLine();
 
                     // Validate file exists
                     while (!File.Exists(logFilePath))
                     {
+                        SetConsoleColor(ConsoleColor.Red);
                         Console.WriteLine("File not found. Please enter a valid path:");
+                        ResetConsoleColor();
                         logFilePath = Console.ReadLine();
                     }
                 }
@@ -65,7 +85,9 @@ namespace ExodusHub_Kill_Tracker
                         // Validate file exists
                         while (!File.Exists(logFilePath))
                         {
+                            SetConsoleColor(ConsoleColor.Red);
                             Console.WriteLine("File not found. Please enter a valid path:");
+                            ResetConsoleColor();
                             logFilePath = Console.ReadLine();
                         }
                     }
@@ -90,17 +112,23 @@ namespace ExodusHub_Kill_Tracker
                 }
                 catch (Exception ex)
                 {
+                    SetConsoleColor(ConsoleColor.Red);
                     Console.WriteLine($"Error accessing log file: {ex.Message}");
+                    ResetConsoleColor();
                     Console.Write("Please enter a valid path to your game.log file: ");
                     logFilePath = Console.ReadLine();
                     while (!File.Exists(logFilePath))
                     {
+                        SetConsoleColor(ConsoleColor.Red);
                         Console.WriteLine("File not found. Please enter a valid path:");
+                        ResetConsoleColor();
                         logFilePath = Console.ReadLine();
                     }
                 }
             }
+            SetConsoleColor(ConsoleColor.Green);
             Console.WriteLine($"Game.log file found and being actively tracked in real time: {logFilePath}");
+            ResetConsoleColor();
 
             // --- Show the most recent log line for context (truncated for brevity) ---
             try
@@ -135,7 +163,9 @@ namespace ExodusHub_Kill_Tracker
             }
             catch (Exception ex)
             {
+                SetConsoleColor(ConsoleColor.Red);
                 Console.WriteLine($"Could not read last log line: {ex.Message}");
+                ResetConsoleColor();
             }
 
             // Step 2: Get the username
@@ -165,12 +195,16 @@ namespace ExodusHub_Kill_Tracker
             var (apiConnected, apiMessage) = await httpClient.VerifyApiConnectionAsync();
             if (apiConnected)
             {
+                SetConsoleColor(ConsoleColor.Green);
                 Console.WriteLine($"[API] {apiMessage}");
+                ResetConsoleColor();
             }
             else
             {
+                SetConsoleColor(ConsoleColor.Red);
                 Console.WriteLine($"[API] {apiMessage}");
                 Console.WriteLine("Unable to connect to the server API. Please check your internet connection or try again later.");
+                ResetConsoleColor();
                 Console.WriteLine("Press any key to exit...");
                 Console.ReadKey();
                 return;
@@ -247,23 +281,6 @@ namespace ExodusHub_Kill_Tracker
             Console.WriteLine($"\nTotal kills for {username}: {killCount}");
         }
 
-        //// Helper to save last processed file position
-        //static void SaveLastPosition(long position)
-        //{
-        //    File.WriteAllText("last_position.txt", position.ToString());
-        //}
-
-        //// Helper to load last processed file position
-        //static long LoadLastPosition()
-        //{
-        //    if (File.Exists("last_position.txt"))
-        //    {
-        //        var text = File.ReadAllText("last_position.txt");
-        //        if (long.TryParse(text, out long pos))
-        //            return pos;
-        //    }
-        //    return 0;
-        //}
 
         // Process a single log line and return updated killCount
         static async Task<int> ProcessKillLogLineAsync(string line, Regex regex, string username, int killCount)
@@ -273,9 +290,6 @@ namespace ExodusHub_Kill_Tracker
             {
                 return killCount;
             }
-
-            // Log potential kill lines for debugging
-            //Console.WriteLine("Potential kill line found: " + line);
 
             // Try the primary regex first
             Match match = regex.Match(line);
@@ -336,15 +350,30 @@ namespace ExodusHub_Kill_Tracker
                     var (success, message) = await httpClient.SendKillDataWithDetailsAsync(killData);
                     if (success)
                     {
+                        SetConsoleColor(ConsoleColor.Green);
                         Console.WriteLine("✓ Kill data sent to server successfully");
+                        ResetConsoleColor();
                     }
                     else
                     {
-                        Console.WriteLine($"× Failed to send kill data to server: {message}");
+                        SetConsoleColor(ConsoleColor.Red);
+                        Console.WriteLine($"× Kill data was not registered on the server - Reason: {message}");
+                        ResetConsoleColor();
                     }
                 }
             }
             return killCount;
+        }
+
+        // --- Helper methods for colored output ---
+        static void SetConsoleColor(ConsoleColor color)
+        {
+            Console.ForegroundColor = color;
+        }
+
+        static void ResetConsoleColor()
+        {
+            Console.ResetColor();
         }
     }
 }

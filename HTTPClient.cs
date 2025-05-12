@@ -11,7 +11,8 @@ namespace ExodusHub_Kill_Tracker
         private readonly HttpClient _client;
         private string _apiBaseUrl; // Store the base API URL
 
-        public HTTPClient(string apiUrl = "http://localhost:3000/api")
+        //public HTTPClient(string apiUrl = "http://localhost:3000/api")
+        public HTTPClient(string apiUrl = "https://sc.exoduspmc.org/api")
         {
             _client = new HttpClient();
             _apiBaseUrl = apiUrl.TrimEnd('/'); // Don't append /kills here
