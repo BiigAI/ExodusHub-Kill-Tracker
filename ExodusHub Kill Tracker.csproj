@@ -10,7 +10,12 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>true</PublishSingleFile>
     <SignAssembly>True</SignAssembly>
+    <ApplicationIcon>exodus-light.ico</ApplicationIcon>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Content Include="exodus-light.ico" />
+  </ItemGroup>
   
   <ItemGroup>
     <None Update="appsettings.json">

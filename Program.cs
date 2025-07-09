@@ -38,6 +38,7 @@ namespace ExodusHub_Kill_Tracker
             var userSettings = UserSettings.Load();
             string logFilePath = userSettings?.GameLogPath;
             string username = userSettings?.Username;
+            string authToken = userSettings?.AuthToken;
 
             // Step 1: Get the path to the game.log file
             if (string.IsNullOrWhiteSpace(logFilePath))
@@ -185,11 +186,42 @@ namespace ExodusHub_Kill_Tracker
                 }
             }
 
-            // Save user settings for next time
-            UserSettings.Save(logFilePath, username);
+            // Step 3: Get the authentication token
+            if (string.IsNullOrWhiteSpace(authToken))
+            {
+                SetConsoleColor(ConsoleColor.Yellow);
+                Console.WriteLine("\n--- Exodus Kill Tracker Authentication Token Required ---");
+                Console.WriteLine("To get your authentication token, log in to the Exodus Hub website.");
+                Console.WriteLine("Navigate to the Kill Tracker section and copy your token.");
+                Console.WriteLine("Paste the token below and save settings.");
+                Console.WriteLine("Tokens are valid for 60 days and can only be used on one client at a time.");
+                ResetConsoleColor();
+                Console.Write("Enter your authentication token: ");
+                authToken = Console.ReadLine();
+                while (string.IsNullOrWhiteSpace(authToken))
+                {
+                    SetConsoleColor(ConsoleColor.Red);
+                    Console.WriteLine("Token cannot be empty. Please enter your authentication token:");
+                    ResetConsoleColor();
+                    authToken = Console.ReadLine();
+                }
+            }
+            else
+            {
+                Console.WriteLine($"Using saved authentication token: {authToken.Substring(0, Math.Min(8, authToken.Length))}...");
+                Console.Write("Press Enter to use this token, or type a new one: ");
+                string newToken = Console.ReadLine();
+                if (!string.IsNullOrWhiteSpace(newToken))
+                {
+                    authToken = newToken;
+                }
+            }
 
-            // Initialize the HTTP client
-            httpClient = new HTTPClient();
+            // Save user settings for next time (now includes token)
+            UserSettings.Save(logFilePath, username, authToken);
+
+            // Initialize the HTTP client with token
+            httpClient = new HTTPClient(authToken: authToken);
 
             // --- Verify connection to the server API before proceeding ---
             var (apiConnected, apiMessage) = await httpClient.VerifyApiConnectionAsync();

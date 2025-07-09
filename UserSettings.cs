@@ -8,6 +8,7 @@ namespace ExodusHub_Kill_Tracker
     {
         public string GameLogPath { get; set; }
         public string Username { get; set; }
+        public string AuthToken { get; set; } // <-- Add this line
 
         public static UserSettings Load()
         {
@@ -27,7 +28,9 @@ namespace ExodusHub_Kill_Tracker
                         GameLogPath = userSettingsElement.TryGetProperty("GameLogPath", out var pathElement) ? 
                             pathElement.GetString() : null,
                         Username = userSettingsElement.TryGetProperty("Username", out var usernameElement) ? 
-                            usernameElement.GetString() : null
+                            usernameElement.GetString() : null,
+                        AuthToken = userSettingsElement.TryGetProperty("AuthToken", out var tokenElement) ?
+                            tokenElement.GetString() : null // <-- Add this line
                     };
                 }
             }
@@ -38,7 +41,7 @@ namespace ExodusHub_Kill_Tracker
             return null;
         }
 
-        public static void Save(string gameLogPath, string username)
+        public static void Save(string gameLogPath, string username, string authToken)
         {
             try
             {
@@ -74,7 +77,8 @@ namespace ExodusHub_Kill_Tracker
                 var userSettings = new System.Text.Json.Nodes.JsonObject
                 {
                     ["GameLogPath"] = gameLogPath,
-                    ["Username"] = username
+                    ["Username"] = username,
+                    ["AuthToken"] = authToken // <-- Add this line
                 };
                 
                 newJson.Add("UserSettings", userSettings);
