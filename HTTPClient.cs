@@ -12,8 +12,8 @@ namespace ExodusHub_Kill_Tracker
         private string _authToken;
         private const string CLIENT_VERSION = "A1";
 
-        public HTTPClient(string apiUrl = "http://localhost:3000/api", string authToken = null)
-        //public HTTPClient(string apiUrl = "https://sc.exoduspmc.org/api", string authToken = null)
+        //public HTTPClient(string apiUrl = "http://localhost:3000/api", string authToken = null)
+        public HTTPClient(string apiUrl = "https://sc.exoduspmc.org/api", string authToken = null)
         {
             _client = new HttpClient();
             _apiBaseUrl = apiUrl.TrimEnd('/');
@@ -145,7 +145,7 @@ namespace ExodusHub_Kill_Tracker
         {
             try
             {
-                var request = new HttpRequestMessage(HttpMethod.Get, _apiBaseUrl);
+                var request = new HttpRequestMessage(HttpMethod.Get, _apiBaseUrl + "/status");
                 AddAuthHeaders(request);
 
                 var response = await _client.SendAsync(request);
@@ -159,6 +159,38 @@ namespace ExodusHub_Kill_Tracker
                     try
                     {
                         var jsonContent = System.Text.Json.JsonDocument.Parse(responseContent);
+
+                        // Check for tokenValidation in the response (new server behavior)
+                        if (jsonContent.RootElement.TryGetProperty("tokenValidation", out var tokenValidation))
+                        {
+                            if (tokenValidation.TryGetProperty("valid", out var validElement) && !validElement.GetBoolean())
+                            {
+                                if (tokenValidation.TryGetProperty("reason", out var reasonElement))
+                                {
+                                    string reason = reasonElement.GetString();
+                                    switch (reason)
+                                    {
+                                        case "INVALID_TOKEN_FORMAT":
+                                            return (false, "Invalid token format. Please get a new token from the website.");
+                                        case "TOKEN_NOT_FOUND":
+                                            return (false, "Token not found. Please get a new token from the website.");
+                                        case "TOKEN_EXPIRED":
+                                            return (false, "Token has expired. Please get a new token from the website.");
+                                        case "TOKEN_IN_USE_ELSEWHERE":
+                                            return (false, "Token is already being used by another client.");
+                                        case "OUTDATED_CLIENT":
+                                            return (false, "Client version is outdated. Please update the application.");
+                                        case "VALIDATION_ERROR":
+                                            return (false, "Server error validating token. Please try again later.");
+                                        default:
+                                            return (false, $"Token validation failed: {reason}");
+                                    }
+                                }
+                                return (false, "Token validation failed.");
+                            }
+                        }
+
+                        // Fallback to old error handling for backwards compatibility
                         if (jsonContent.RootElement.TryGetProperty("code", out var codeElement))
                         {
                             string code = codeElement.GetString();
