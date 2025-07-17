@@ -20,8 +20,9 @@ ExodusHub Kill Tracker is a Windows executable that monitors your Star Citizen `
 ### Configuration
 
 On first launch, you will be prompted to enter:
-- The path to your `Game.log` file (default: `C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\Game.log`)
+- The path to your `Game.log` file (default: `C:\Program Files\Roberts Space Industries\StarCitizen\LIVE\Game.log`) It is important to realize that the path must include `Game.log` at the end!
 - Your Star Citizen username
+- Your API Token (Found at `https://sc.exoduspmc.org/kills`)
 
 These settings are saved in `appsettings.json` for future runs.
 
